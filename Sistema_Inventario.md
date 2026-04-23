@@ -1,4 +1,4 @@
-# SRS – Sistema de Gestión de Inventario para Tienda
+# SRS – Sistema Inventario para Tienda
 
 **Documento:** Especificación de Requisitos de Software (SRS)  
 **Versión:** 1.0  
