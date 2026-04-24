@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Diagramas UML — SGIT</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f8f7f4; color: #2c2c2a; padding: 2rem; }
+    h1 { font-size: 1.6rem; font-weight: 500; margin-bottom: 0.4rem; }
+    .subtitle { color: #5f5e5a; margin-bottom: 2.5rem; font-size: 0.95rem; }
+    .diagram-card {
+      background: #fff;
+      border: 1px solid #e0ddd6;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    .diagram-card h2 { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.4rem; }
+    .diagram-card p { font-size: 0.875rem; color: #5f5e5a; margin-bottom: 1.5rem; line-height: 1.6; }
+    .mermaid { display: flex; justify-content: center; overflow-x: auto; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1a1a18; color: #c2c0b6; }
+      .diagram-card { background: #242422; border-color: #3a3a38; }
+      .diagram-card h2 { color: #e8e6de; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>Diagramas UML — SGIT</h1>
+<p class="subtitle">Sistema de Gestión de Inventario para Tienda &nbsp;·&nbsp; Stack: Node.js + Express + MySQL</p>
+
+<!-- 1. DIAGRAMA DE CLASES -->
+<div class="diagram-card">
+  <h2>1. Diagrama de clases</h2>
+  <p>Muestra las entidades principales del sistema, sus atributos, métodos y relaciones entre ellas.</p>
+  <div class="mermaid">
+classDiagram
+  direction TB
+
+  class User {
+    +int id
+    +string nombre
+    +string email
+    +string password_hash
+    +string rol
+    +boolean activo
+    +login(email, password) string
+    +logout() void
+    +resetPassword(token, nueva) void
+  }
+
+  class Product {
+    +int id
+    +string nombre
+    +string sku
+    +int categoria_id
+    +decimal precio
+    +int stock
+    +int stock_minimo
+    +boolean activo
+    +getAll(filtros) list
+    +create(datos) int
+    +adjustStock(cantidad, obs) void
+    +deactivate() void
+  }
+
+  class Category {
+    +int id
+    +string nombre
+    +string descripcion
+    +getProducts() list
+  }
+
+  class Movement {
+    +int id
+    +int product_id
+    +int usuario_id
+    +int supplier_id
+    +string tipo
+    +int cantidad
+    +string fecha
+    +string observacion
+    +register(datos) int
+    +getByProduct(id) list
+    +getByPeriod(ini, fin) list
+  }
+
+  class Supplier {
+    +int id
+    +string nombre
+    +string ruc
+    +string telefono
+    +string email
+    +getMovements() list
+  }
+
+  class AlertService {
+    -array subscribers
+    +subscribe(evento, handler) void
+    +notify(evento, data) void
+    -sendEmail(productos) void
+  }
+
+  class ReportFactory {
+    +create(tipo) Report
+  }
+
+  class Report {
+    +generate(params) object
+  }
+
+  class InventoryReport {
+    +generate(params) object
+  }
+
+  class MovementsReport {
+    +generate(params) object
+  }
+
+  User "1" --> "0..*" Movement : registra
+  Product "1" --> "0..*" Movement : tiene
+  Category "1" --> "0..*" Product : agrupa
+  Supplier "1" --> "0..*" Movement : provee en
+  AlertService ..> Product : observa stock
+  ReportFactory --> Report : crea
+  Report <|.. InventoryReport : implementa
+  Report <|.. MovementsReport : implementa
+  </div>
+</div>
+
+<!-- 2. DIAGRAMA DE CASOS DE USO -->
+<div class="diagram-card">
+  <h2>2. Diagrama de casos de uso</h2>
+  <p>Define los tres actores del sistema y las funcionalidades a las que cada uno tiene acceso.</p>
+  <div class="mermaid">
+flowchart LR
+  Admin(["Administrador"])
+  Empleado(["Empleado"])
+  Gerente(["Gerente"])
+
+  subgraph SGIT [Sistema SGIT]
+    UC1("Gestionar productos")
+    UC2("Gestionar categorias")
+    UC3("Gestionar proveedores")
+    UC4("Gestionar usuarios")
+    UC5("Registrar entrada")
+    UC6("Registrar salida")
+    UC7("Ajustar inventario")
+    UC8("Buscar productos")
+    UC9("Ver alertas de stock")
+    UC10("Ver dashboard")
+    UC11("Generar reportes")
+    UC12("Ver historial")
+  end
+
+  Admin --- UC1
+  Admin --- UC2
+  Admin --- UC3
+  Admin --- UC4
+  Admin --- UC5
+  Admin --- UC6
+  Admin --- UC7
+  Admin --- UC8
+  Admin --- UC9
+  Admin --- UC10
+  Admin --- UC11
+
+  Empleado --- UC5
+  Empleado --- UC6
+  Empleado --- UC8
+
+  Gerente --- UC10
+  Gerente --- UC11
+  Gerente --- UC12
+  Gerente --- UC9
+  </div>
+</div>
+
+<!-- 3. DIAGRAMA DE SECUENCIA -->
+<div class="diagram-card">
+  <h2>3. Diagrama de secuencia</h2>
+  <p>Flujo de mensajes al registrar una entrada de mercancía, incluyendo la transacción en base de datos y verificación de stock mínimo.</p>
+  <div class="mermaid">
+sequenceDiagram
+  actor Empleado
+  participant Ctrl as MovementController
+  participant Model as MovementModel
+  participant DB as MySQL
+
+  Empleado->>Ctrl: POST /api/movimientos/entrada
+  activate Ctrl
+
+  Note over Ctrl: Verifica JWT middleware
+  Note over Ctrl: Valida datos del body
+
+  Ctrl->>Model: register(datos, usuarioId)
+  activate Model
+
+  Model->>DB: BEGIN TRANSACTION
+  activate DB
+
+  Model->>DB: INSERT INTO movements
+  DB-->>Model: insertId
+
+  Model->>DB: UPDATE products SET stock
+  DB-->>Model: affectedRows 1
+
+  Model->>DB: COMMIT
+  deactivate DB
+
+  alt stock bajo el minimo
+    Model-->>Ctrl: id, stock_nuevo, alerta true
+    Ctrl->>Ctrl: AlertService.notify LOW_STOCK
+  else stock normal
+    Model-->>Ctrl: id, stock_nuevo, alerta false
+  end
+
+  deactivate Model
+
+  Ctrl-->>Empleado: 201 Created ok true
+  deactivate Ctrl
+  </div>
+</div>
+
+<!-- 4. DIAGRAMA DE ESTADO -->
+<div class="diagram-card">
+  <h2>4. Diagrama de estado</h2>
+  <p>Ciclo de vida completo de un producto, desde su creación hasta su desactivación, con todas las transiciones posibles entre estados.</p>
+  <div class="mermaid">
+stateDiagram-v2
+  [*] --> Activo : crear producto
+
+  Activo --> StockBajo : salida, stock cae al minimo
+  StockBajo --> Activo : entrada, stock supera el minimo
+
+  StockBajo --> SinStock : salida, stock llega a cero
+  SinStock --> StockBajo : entrada, stock mayor a cero
+
+  Activo --> Inactivo : admin desactiva
+  StockBajo --> Inactivo : admin desactiva
+  SinStock --> Inactivo : admin desactiva
+  Inactivo --> Activo : admin reactiva
+
+  Inactivo --> [*]
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default',
+    themeVariables: {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '14px'
+    }
+  });
+</script>
+</body>
+</html>
